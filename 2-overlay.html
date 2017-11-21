@@ -40,6 +40,12 @@
         <button id="setAnimate">创建带有动画的覆盖物</button>
         <button id="customIcon">自定义图标</button>
         <button id='dragIcon'>创建可以拖拽的标注</button>
+        <button id="editOl">可编辑的覆盖物</button>
+        <button id="createLabel">创建标注</button>
+        <button id="olWithLabel">创建带标注的覆盖物</button>
+        <button id="infoOfOl">获取覆盖物的信息(点击事件)</button>
+        <button id="getBounds">获取地图的可视边界并随机生成覆盖物</button>
+        <button id="delOl">删除id=3的覆盖物</button>
         <div id="content"></div>
     </div>
     <script>
@@ -60,6 +66,24 @@
             }
             document.querySelector('#dragIcon').onclick = function(){
                 setMarkerDrag();
+            }
+            document.querySelector('#editOl').onclick = function(){
+                createEditableOl();
+            }
+            document.querySelector('#createLabel').onclick = function(){
+                createLabel();
+            }
+            document.querySelector('#olWithLabel').onclick = function(){
+                createOlWithLabel();
+            }
+            document.querySelector('#infoOfOl').onclick = function(){
+                getInfoOfOl();
+            }
+            document.querySelector('#getBounds').onclick = function(){
+                createRandomOl();
+            }
+            document.querySelector('#delOl').onclick = function(){
+                delOverlay();
             }
         }
         // 地图初始化
@@ -142,6 +166,119 @@
             map.addOverlay(marker);
             marker.enableDragging();   // 设置标注可以拖拽
         }
+        // 可编辑的覆盖物
+        function createEditableOl(){
+            var polyline = new BMap.Polyline([
+                new BMap.Point(116.399, 39.910),
+                new BMap.Point(116.405, 39.920),
+                new BMap.Point(116.423493, 39.907445)
+            ], {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});   //创建折线
+            map.addOverlay(polyline);   //增加折线
+            var polygon = new BMap.Polygon([
+                new BMap.Point(116.387112,39.920977),
+                new BMap.Point(116.385243,39.913063),
+                new BMap.Point(116.394226,39.917988),
+                new BMap.Point(116.401772,39.921364),
+                new BMap.Point(116.41248,39.927893)
+            ], {strokeColor:"blue", strokeWeight:2, strokeOpacity:0.5});  //创建多边形
+            map.addOverlay(polygon);   //增加多边形
+
+            // 开启编辑
+            polyline.enableEditing();
+            polygon.enableEditing();
+            // 关闭可编辑功能
+            // polyline.disableEditing();
+            // polygon.disableEditing();
+
+            // 覆盖物的显示与隐藏
+            // circle.show();
+            // circle.hide();
+        }
+        // 创建标注
+        function createLabel(){
+            var point = new BMap.Point(116.417854,39.921988);
+            var opts = {
+                position: point,
+                offset: new BMap.Size(30,-30)
+            }
+            var label = new BMap.Label('这是北京城...',opts);
+            label.setStyle({
+                color: 'red',
+                fontSize: '60px',
+                height: '100px',
+                lineHeight: '100px',
+                fontFamily: '微软雅黑',
+                padding: '5px 10px'
+            })
+            map.addOverlay(label);
+        }
+        // 创建带标注的覆盖物
+        function createOlWithLabel(){
+            var point = new BMap.Point(116.400244,39.92556);
+            var maker = new BMap.Marker(point);
+            var label = new BMap.Label('我是覆盖物的标注',{
+                offset: new BMap.Size(25,-20)
+            });
+            label.setStyle({
+                color: 'blue',
+                fontSize: '35px',
+                borderColor:'#aaa',
+                backgroundColor:'#eee'
+            });
+            maker.setLabel(label);
+            map.addOverlay(maker);
+        }
+        // 获取覆盖物的信息
+        function getInfoOfOl(){
+            var point = new BMap.Point(116.400244,39.92556);
+            var marker = new BMap.Marker(point);
+            map.addOverlay(marker);
+            marker.addEventListener('click',getArr);
+            function getArr(){
+                var p = this.getPosition();   // 获取当前覆盖物的位置信息
+                alert('当前marker的位置是：'+p.lng+','+p.lat);
+            }
+        }
+        // 获取当前地图的边界，并向其中随机插入25个覆盖物
+        function createRandomOl(){
+            // 获取地图边界
+            var bounds = map.getBounds();
+            var sw = bounds.getSouthWest();
+            var ne = bounds.getNorthEast();
+            var lngSpan = Math.abs(sw.lng-ne.lng);
+            var latSpan = Math.abs(ne.lat-sw.lat);
+            alert('当前地图的可视边界是：'+lngSpan+'----'+latSpan);
+            for(var i=0; i<25; i++){
+                var lng = Math.random()*lngSpan + sw.lng;
+                var lat = ne.lat - Math.random()*latSpan;
+                var point = new BMap.Point(lng,lat);
+                var label = new BMap.Label('我的id='+i,{
+                    offset: new BMap.Size(20,-10)
+                })
+                addMarker(point,label);
+            }
+            function addMarker(point,label){
+                var marker = new BMap.Marker(point);
+                marker.setLabel(label);
+                map.addOverlay(marker);
+            }
+        }
+        // 手动删除覆盖物
+        function delOverlay(){
+            var allOverlay = map.getOverlays();
+            console.log(allOverlay)
+            if(allOverlay && allOverlay.length>1){
+                for(var i=1; i<allOverlay.length-2; i++){
+                    // 获取覆盖物的标注、再获取标注的内容
+                    if(parseInt(allOverlay[i].getLabel().content.split('=')[1]) > 1){
+                        map.removeOverlay(allOverlay[i]);
+                    }
+                }
+            }else{
+                alert('请先创建覆盖物');
+            }
+        }
+        // 加载闪烁点
     </script>
 </body>
 
