@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>地图应用</title>
+    <style>
+    #map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 25%;
+    }
+
+    #handle {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: 75%;
+        bottom: 0;
+        box-sizing: border-box;
+        padding: 20px;
+    }
+
+    #content {
+        word-wrap: break-word;
+        padding: 15px;
+        margin-top: 30px;
+    }
+    </style>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=QGia8zSd1GfTKCztRDZHTed9geETG6em"></script>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="handle">
+        <button id="addOverLay">添加覆盖物</button>
+        <button id="delOverLay">删除覆盖物</button>
+        <button id="setAnimate">创建带有动画的覆盖物</button>
+        <button id="customIcon">自定义图标</button>
+        <button id='dragIcon'>创建可以拖拽的标注</button>
+        <div id="content"></div>
+    </div>
+    <script>
+        window.onload = function(){
+            var map = null;
+            mapInit();
+            document.querySelector('#addOverLay').onclick = function(){
+                addOL();
+            }
+            document.querySelector('#delOverLay').onclick = function(){
+                delOL();
+            }
+            document.querySelector('#setAnimate').onclick = function(){
+                setAnimationForOl();
+            }
+            document.querySelector('#customIcon').onclick = function(){
+                setCostomIcon();
+            }
+            document.querySelector('#dragIcon').onclick = function(){
+                setMarkerDrag();
+            }
+        }
+        // 地图初始化
+        function mapInit() {
+            map = new BMap.Map("map",{minZoom:8, maxZoom:16});
+            var point = new BMap.Point(116.404, 39.915);
+            map.centerAndZoom(point, 15);
+            map.enableScrollWheelZoom(true); //开启鼠标滚轮缩放
+        }
+        // 创建点、折线、圆、多边形、矩形对象
+        function addOL(){
+            // 创建maker，只需要一个点对象
+            var marker = new BMap.Marker(new BMap.Point(116.404, 39.915));
+            // 创建折线，需要三个以上的点对象
+            var polyline = new BMap.Polyline([
+                new BMap.Point(116.399, 39.910),
+                new BMap.Point(116.405, 39.920),
+                new BMap.Point(116.425, 39.900)
+            ],{strokeColor:'blue',strokeWeight:3,strokeOpacity:0.5});
+            // 创建圆，指定圆心和半径
+            var circle = new BMap.Circle(new BMap.Point(116.404, 39.915),500,{strokeColor:'blue',strokeWeight:3,strokeOpacity:0.5});
+            // 创建多边形
+            var polygon = new BMap.Polygon([
+                new BMap.Point(116.387112,39.920977),
+                new BMap.Point(116.385243,39.913063),
+                new BMap.Point(116.394226,39.917988),
+                new BMap.Point(116.401772,39.921364),
+                new BMap.Point(116.41248,39.927893)
+            ],{strokeColor:'blue',strokeWeight:3,strokeOpacity:0.5});
+            // 创建矩形
+            var pStart = new BMap.Point(116.392214,39.918985);
+            var pEnd = new BMap.Point(116.41478,39.911901);
+            var rectangle = new BMap.Polygon([
+                new BMap.Point(pStart.lng,pStart.lat),
+                new BMap.Point(pEnd.lng,pStart.lat),
+                new BMap.Point(pEnd.lng,pEnd.lat),
+                new BMap.Point(pStart.lng,pEnd.lat)
+            ],{strokeColor:'blue',strokeWeight:3,strokeOpacity:0.5});
+
+            map.addOverlay(marker);
+            map.addOverlay(polyline);
+            map.addOverlay(circle);
+            map.addOverlay(polygon);
+            map.addOverlay(rectangle);
+        }
+        // 删除地图上的所有覆盖物
+        function delOL(){
+            map.clearOverlays();    // 清除覆盖物
+        }
+        // 动画
+        function setAnimationForOl(){
+            var lat = 116404;
+            var lng = 39915;
+            for(var i=0; i<10; i++){
+                var r1 = Math.random()*20;
+                var r2 = Math.random()*20;
+                var lat1 = lat+r1;
+                var lng1 = lng+r2;
+                var point = new BMap.Point(lat1/1000, lng1/1000);
+                var marker = new BMap.Marker(point);
+                marker.setAnimation(BMAP_ANIMATION_BOUNCE); // 跳动的动画
+                map.addOverlay(marker);
+            }            
+        }
+        // 自定义icon
+        function setCostomIcon(){
+            var pt = new BMap.Point(116.404, 39.91);
+            // 自定义图标，并指定图标大小
+            var myIcon = new BMap.Icon('./img/myicon.png',new BMap.Size(200,200));
+            var marker = new BMap.Marker(pt,{icon:myIcon});
+            map.addOverlay(marker);
+            marker.disableDragging();  // 设置标注不可拖拽
+        }
+        // 设置标注可拖拽
+        function setMarkerDrag(){
+            var pt = new BMap.Point(116.404, 39.91);
+            // 自定义图标，并指定图标大小
+            var myIcon = new BMap.Icon('./img/myicon.png',new BMap.Size(200,200));
+            var marker = new BMap.Marker(pt,{icon:myIcon});
+            map.addOverlay(marker);
+            marker.enableDragging();   // 设置标注可以拖拽
+        }
+    </script>
+</body>
+
+</html>
