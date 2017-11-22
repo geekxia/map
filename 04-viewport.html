@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		html,body {
+			width: 100%;
+			height: 100%;
+		}
+		#map {
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=QGia8zSd1GfTKCztRDZHTed9geETG6em"></script>
+</head>
+<body>
+
+	<div id="map"></div>
+
+	<script>
+		var map = new BMap.Map('map',{});
+		map.centerAndZoom(new BMap.Point(116.403765, 39.914850),5);
+		map.enableScrollWheelZoom();
+
+		function getBoundary(){
+			var bdary = new BMap.Boundary();
+			bdary.get('北京市海淀区',function(rs){
+				map.clearOverlays();
+				var count = rs.boundaries.length;
+				if(count ===0){
+					alert('未能获取当前输入的行政区划');
+					return;
+				}
+				var pointArray = [];
+				for(var i=0; i<count; i++){
+					var ply = new BMap.Polygon(rs.boundaries[i],{strokeWeight:2,strokeColor:'#ff0000'});
+					map.addOverlay(ply);
+					pointArray = pointArray.concat(ply.getPath());
+				}
+				map.setViewport(pointArray);   // 调整视野
+			})
+		}
+		setTimeout(function(){
+			getBoundary();  // 延迟2秒获取区域边界信息
+		},2000);
+
+	</script>
+	
+</body>
+</html>

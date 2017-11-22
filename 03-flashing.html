@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Document</title>
+	<style>
+		html,body {
+			margin: 0;
+			width: 100%;
+			height: 100%;
+			background-color: #333;
+		}
+		#map {
+			width: 100%;
+			height: 100%;
+		}
+	</style>
+	<script type="text/javascript" src="http://api.map.baidu.com/api?v=2.0&ak=QGia8zSd1GfTKCztRDZHTed9geETG6em"></script>
+</head>
+<body>
+	<div id="map"></div>
+
+	<script>
+		// 面向对象 + canvas + map
+
+		// 1-初始化地图及其样式风格
+		var map = new BMap.Map('map',{});
+		map.centerAndZoom(new BMap.Point(116.404, 39.915),8); // 设置地图中心点及缩放级别
+		map.enableScrollWheelZoom();
+
+		// 判断当前浏览器是否支持canvas
+		if(document.createElement('canvas').getContext){
+			var mapStyle = {
+				features: ['road','building','water','land'],  // 隐藏地图默认poi
+				style: 'dark'  // 设置为高端黑风格的地图
+			}
+			map.setMapStyle(mapStyle);  // 设置地图样式
+			// 2-数据初始化
+			var BW = 0,
+				BH = 0,
+				ctx = null,
+				stars = [],   // 存储所有的星星
+				timer = null,
+				timeLine = null,  // 时间轴对象
+				rs = [],    // 最新结果
+				isNowTimeDate = false,  
+				py = null,   // 偏移
+				gridWidth = 10000,   // 网格大小
+				isOverlay = false,
+				canvas = null;
+			// OO 创建星星对象
+			function Star(options){
+				this.init(options);
+			}
+			Star.prototype.init = function(options){
+				this.x = ~~(options.x);
+				this.y = ~~(options.y);
+				this.initSize(options.size);
+				if(~~(0.5+Math.random()*7) == 1){
+					this.size = 0;
+				}else{
+					this.size = this.maxSize;
+				}
+			}
+			Star.prototype.initSize = function(size){
+				var size = ~~(size);
+				this.maxSize = size>6 ? 6 : size;
+			}
+			Star.prototype.render = function(i){
+				var p = this;
+				// 超出显示边界
+				if(p.x < 0 || p.y <0 || p.x >BW || p.y >BH){
+					return;
+				}
+				// 使用canvas开始绘图
+				ctx.beginPath();
+				// 星星的渐变色
+				var gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+				gradient.addColorStop(0, 'rgba(7,120,249,1)');
+				gradient.addColorStop(1, 'rgba(7,120,249,0.3)');
+				ctx.fillStyle = gradient;
+				// 绘制圆弧
+				ctx.arc(p.x, p.y, p.size, Math.PI*2, false);
+				ctx.fill();
+				if(~~(0.5+Math.random()*7) == 1){
+					p.size = 0;
+				}else{
+					p.size = p.maxSize;
+				}
+			}
+			// 渲染
+			function render(){
+				renderAction();
+				setTimeout(render, 180);  // 每隔180毫秒渲染一次
+			}
+			function renderAction(){
+				// 重绘前先清空canvas画布
+				ctx.clearRect(0,0,BW,BH);
+				ctx.globalCompositeOperation = 'lighter';
+				for(var i=0, len=stars.length; i<len; ++i){
+					if(stars[i]){
+						stars[i].render(i);
+					}
+				}
+			}
+			// OO 复杂的自定义覆盖物
+			function ComplexCustomOverlay(point){
+				this._point = point;
+			}
+			ComplexCustomOverlay.prototype = new BMap.Overlay();
+			ComplexCustomOverlay.prototype.initialize = function(map){
+				this._map = map;
+				canvas = this.canvas = document.createElement('canvas');
+				canvas.style.cssText = 'position:absolute; left:0; top:0;';
+				ctx = canvas.getContext('2d');
+				var size = map.getSize();
+				canvas.width = BW = size.width;
+				canvas.height = BH = size.height;
+				map.getPanes().labelPane.appendChild(canvas);
+				// map.getContainer().appendChild(canvas);
+				return this.canvas;
+			}
+			ComplexCustomOverlay.prototype.draw = function(){
+				var map = this._map;
+				// 获取地图边界
+				var bounds = map.getBounds();
+				var sw = bounds.getSouthWest();
+				var ne = bounds.getNorthEast();
+				// 获取地图的当前像素比
+				var pixel = map.pointToOverlayPixel(new BMap.Point(sw.lng,ne.lat));
+				py = pixel;
+				if(rs.length>0){
+					showStars(rs);
+				}
+			}
+			var myCompOverlay = new ComplexCustomOverlay(new BMap.Point(116.407845,39.914101));
+			map.addOverlay(myCompOverlay);
+
+			var project = map.getMapType().getProjection();
+			var bounds = map.getBounds();
+			var sw = bounds.getSouthWest();
+			var ne = bounds.getNorthEast();
+			sw = project.lngLatToPoint(new BMap.Point(sw.lng, sw.lat));
+			ne = project.lngLatToPoint(new BMap.Point(ne.lng, ne.lat));
+
+			// 左上角墨卡托坐标点
+			var original = {
+				x: sw.x,
+				y: ne.y
+			}
+
+			// 请求定位数据，并在地图绘制出
+			var requestMgr = {
+				request: function(time,successCb){
+					if(document.location.host === 'developer.baidu.com'){
+						var url = 'http://lbsyun.com/jsdemo/data/data';
+					}else{
+						var url = '../data/data';
+					}
+					// 创建XHR对象
+					var xhr = new XMLHttpRequest();
+					xhr.onreadystatechange = function(){
+						if(xhr.readyState == 4 && xhr.status == 200){
+							if(!isOverlay){
+								rs = JSON.parse(xhr.responseText);
+							}else{
+								rs = rs.concat(JSON.parse(xhr.responseText));
+								if(rs.length>10000){
+									rs.splice(0,rs.length-10000);
+								}
+							}
+							showStars(rs);
+							if(successCb){
+								successCb();
+							}
+						}
+					}
+					xhr.open('GET',url,true);
+					xhr.send(null);
+				}
+			}
+			// 显示星星
+			function showStars(rs){
+				stars.length = 0;
+				var temp = {};
+				for(var i=0, len=rs.length; i<len; i++){
+					var item = rs[i];
+					var addNum = gridWidth / 2;
+					var x = item[0]*gridWidth + addNum;
+					var y = item[0]*gridWidth + addNum;
+					var point = project.pointToLngLat(new BMap.Pixel(x,y));
+					var px = map.pointToOverlayPixel(point);
+					// create all stars
+					var s = new Star({
+						x: px.x - py.x,
+						y: px.y - py.y,
+						size: item[2]
+					});
+					stars.push(s);
+				}
+				canvas.style.left = py.x + 'px';
+				canvas.style.top = py.y + 'px';
+				renderAction();
+			}
+			render();
+			function nowTimeCb(time){
+				requestMgr.request(time,function(){
+					if(isNowTimeDate){
+						setTimeout(function(){
+							if(isNowTimeDate){
+								startCb(nowTimeCb);
+							}
+						},1000);
+					}
+				})
+			}
+			function startCb(cb){
+				var now = new Date();
+				var time = {
+					hour: now.getHours(),
+					minute: now.getMinutes(),
+					second: now.getSeconds()
+				}
+				if(cb){
+					cb(time);
+				}
+			}
+			startCb(nowTimeCb);
+		}else{
+			alert('请在chrome、safari、IE8+以上浏览器查看本实例');
+		}
+	</script>
+</body>
+</html>

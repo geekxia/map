@@ -278,7 +278,30 @@
                 alert('请先创建覆盖物');
             }
         }
-        // 加载闪烁点
+        // 加载海量点
+        function addLotsPoint(){
+            // 绘制，需浏览器支持canvas
+            if(document.createElement('canvas').getContext){
+                var points = [];
+                // 从服务端请求回来的数据 data
+                for(var i=0; i<data.data.length; i++){
+                    points.push(new BMap.Point(data.data[i][0],data[i][1]));
+                }
+                var options = {
+                    size:BMAP_POINT_SIZE_SMALL,
+                    shape:BMAP_POINT_SHAPE_STAR,
+                    color: '#d340c3'
+                }
+                var pointCollection = new BMap.pointCollection(points,options);
+                pointCollection.addEventListener('click',function(e){
+                    alert('单位点的坐标为：'+e.point.lng+','+e.point.lat);
+                })
+                map.addOverlay(pointCollection);
+            }else{
+                alert('请在chrome、safari、ie8+以上浏览器查看效果');
+            }
+        }
+
     </script>
 </body>
 
